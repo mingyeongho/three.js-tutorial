@@ -1,80 +1,104 @@
 "use client";
 
-import {
-  AsciiRenderer,
-  PerspectiveCamera,
-  Plane,
-  Sphere,
-  TrackballControls,
-} from "@react-three/drei";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useRef } from "react";
-import { Mesh, MeshBasicMaterial, MeshPhongMaterial } from "three";
+import { useEffect } from "react";
+import * as THREE from "three";
+import { AsciiEffect, TrackballControls } from "three/addons";
 
 const Page = () => {
-  return (
-    <div className="w-full h-svh">
-      <Canvas resize={{ scroll: false, debounce: 0 }}>
-        <Renderer />
-        <Camera />
-        <pointLight args={[0xffffff, 3, 0, 0]} position={[500, 500, 500]} />
-        <pointLight args={[0xffffff, 1, 0, 0]} position={[-500, -500, -500]} />
-        <SphereMesh />
-        <PlaneMesh />
-        <TrackballControls />
-      </Canvas>
-    </div>
-  );
-};
+  useEffect(() => {
+    let camera: THREE.PerspectiveCamera,
+      controls: TrackballControls,
+      scene: THREE.Scene,
+      renderer: THREE.WebGLRenderer,
+      effect: AsciiEffect;
+    let sphere: THREE.Mesh, plane: THREE.Mesh;
 
-const start = Date.now();
-const SphereMesh = () => {
-  const sphereRef = useRef<Mesh>(null);
+    const start = Date.now();
 
-  useFrame(() => {
-    if (!sphereRef.current) {
-      return;
+    init();
+
+    function init() {
+      camera = new THREE.PerspectiveCamera(
+        70,
+        window.innerWidth / window.innerHeight,
+        1,
+        1000
+      );
+      camera.position.y = 150;
+      camera.position.z = 500;
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0, 0, 0);
+
+      const pointLight1 = new THREE.PointLight(0xffffff, 3, 0, 0);
+      pointLight1.position.set(500, 500, 500);
+      scene.add(pointLight1);
+
+      const pointLight2 = new THREE.PointLight(0xffffff, 1, 0, 0);
+      pointLight2.position.set(-500, -500, -500);
+      scene.add(pointLight2);
+
+      sphere = new THREE.Mesh(
+        new THREE.SphereGeometry(200, 20, 10),
+        new THREE.MeshPhongMaterial({ flatShading: true })
+      );
+      scene.add(sphere);
+
+      // Plane
+
+      plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(400, 400),
+        new THREE.MeshBasicMaterial({ color: 0xe0e0e0 })
+      );
+      plane.position.y = -200;
+      plane.rotation.x = -Math.PI / 2;
+      scene.add(plane);
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setAnimationLoop(animate);
+
+      effect = new AsciiEffect(renderer, " .:-+*=%@#", { invert: true });
+      effect.setSize(window.innerWidth, window.innerHeight);
+      effect.domElement.style.color = "white";
+      effect.domElement.style.backgroundColor = "black";
+
+      // Special case: append effect.domElement, instead of renderer.domElement.
+      // AsciiEffect creates a custom domElement (a div container) where the ASCII elements are placed.
+
+      document.getElementById("container")?.appendChild(effect.domElement);
+
+      controls = new TrackballControls(camera, effect.domElement);
+
+      //
+
+      window.addEventListener("resize", onWindowResize);
     }
-    const timer = Date.now() - start;
-    sphereRef.current.position.y = Math.abs(Math.sin(timer * 0.002)) * 150;
-    sphereRef.current.rotation.x = timer * 0.0003;
-    sphereRef.current.rotation.y = timer * 0.0002;
-  });
 
-  return (
-    <Sphere
-      ref={sphereRef}
-      args={[200, 20, 10]}
-      material={new MeshPhongMaterial({ flatShading: true })}
-    />
-  );
-};
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
 
-const PlaneMesh = () => {
-  return (
-    <Plane
-      args={[400, 400]}
-      position={[0, -200, 0]}
-      rotation={[-Math.PI / 2, 0, 0]}
-      material={new MeshBasicMaterial({ color: 0xe0e0e0 })}
-    />
-  );
-};
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      effect.setSize(window.innerWidth, window.innerHeight);
+    }
 
-const Camera = () => {
-  const { viewport } = useThree();
+    //
 
-  return (
-    <PerspectiveCamera
-      makeDefault
-      args={[70, viewport.width / viewport.height, 1, 1_000]}
-      position={[0, 150, 500]}
-    />
-  );
-};
+    function animate() {
+      const timer = Date.now() - start;
 
-const Renderer = () => {
-  return <AsciiRenderer invert={false} characters=" .:-+*=%@#" />;
+      sphere.position.y = Math.abs(Math.sin(timer * 0.002)) * 150;
+      sphere.rotation.x = timer * 0.0003;
+      sphere.rotation.z = timer * 0.0002;
+
+      controls.update();
+
+      effect.render(scene, camera);
+    }
+  }, []);
+
+  return <div id="container"></div>;
 };
 
 export default Page;
