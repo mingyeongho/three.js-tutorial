@@ -1,9 +1,13 @@
-import Link from "next/link";
+import { Card, CardFooter } from "@/components/ui/card";
 
 export default function Home() {
   return (
     <div>
-      <Link href={`/webgl-effects-ascii`}>WebGL Effects ASCII</Link>
+      <Card>
+        <CardFooter>
+          <p>Card Footer</p>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
